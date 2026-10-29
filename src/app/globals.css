@@ -1,0 +1,233 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", ui-sans-serif, system-ui,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --spacing-tabbar: 4.75rem;
+}
+
+/* ---------------------------------------------------------------------------
+   iOS / iPhone 15 foundations
+   - viewport-fit=cover lets us paint under the Dynamic Island & home indicator
+   - safe-area helpers keep content clear of them
+   - overflow-x clip stops the whole page swiping sideways
+   - 16px form controls stop Safari auto-zooming when a field is focused
+   - tabular numerals stop stat blocks re-flowing as numbers change
+--------------------------------------------------------------------------- */
+
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --tabbar-h: calc(4.25rem + var(--safe-bottom));
+
+  /* Default iOS chrome colours so the status bar blends with the app. */
+  color-scheme: light;
+  --header-bg: rgb(255 255 255 / 0.86);
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  /* Stops the janky 1px shift when a scrollbar appears/disappears. */
+  scrollbar-gutter: stable;
+  overflow-x: clip;
+}
+
+body {
+  font-family: var(--font-sans);
+  overflow-x: clip;
+  /* Kills the rubber-band "moving freely" feel on iOS. */
+  overscroll-behavior-y: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Safari zooms the viewport whenever a control is < 16px. */
+@media (max-width: 640px) {
+  input,
+  select,
+  textarea,
+  button {
+    font-size: 16px;
+  }
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Comfortable iOS scroll, and hidden scrollbars on touch devices. */
+@supports (-webkit-overflow-scrolling: touch) {
+  .ios-scroll {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+}
+
+@media (pointer: coarse) {
+  *::-webkit-scrollbar {
+    display: none;
+  }
+  * {
+    scrollbar-width: none;
+  }
+}
+
+@media (pointer: fine) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(203 213 225) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  *::-webkit-scrollbar-thumb {
+    background-color: rgb(203 213 225);
+    border-radius: 9999px;
+  }
+}
+
+::selection {
+  background-color: rgb(99 102 241 / 0.18);
+}
+
+/* ---------------------------------------------------------------------------
+   Safe-area utilities
+--------------------------------------------------------------------------- */
+
+.safe-top {
+  padding-top: max(0.75rem, var(--safe-top));
+}
+.safe-bottom {
+  padding-bottom: max(1rem, var(--safe-bottom));
+}
+.safe-x {
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
+}
+.tabbar-offset {
+  padding-bottom: calc(var(--tabbar-h) + 1rem);
+}
+.safe-inset {
+  padding-left: max(1rem, var(--safe-left));
+  padding-right: max(1rem, var(--safe-right));
+}
+
+/*
+ * Fixed bars that must respect the notch / home indicator.
+ * The header pins to y=0 and pads internally, which is correct both in Safari
+ * (inset is 0) and in the installed standalone app (inset ~59px on iPhone 15).
+ */
+.fixed-safe-top {
+  top: 0;
+  padding-top: var(--safe-top);
+}
+.fixed-safe-bottom {
+  bottom: 0;
+  padding-bottom: var(--safe-bottom);
+}
+
+/* ---------------------------------------------------------------------------
+   Stability helpers
+--------------------------------------------------------------------------- */
+
+.tnum {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+.nowrap-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.nowrap-scroll::-webkit-scrollbar {
+  display: none;
+}
+.nowrap-scroll > * {
+  scroll-snap-align: start;
+  flex: none;
+}
+
+/* iOS-style momentum trackpad/touch scrolling for inner panes. */
+.momentum {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* ---------------------------------------------------------------------------
+   Motion
+--------------------------------------------------------------------------- */
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(14px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+.animate-sheet {
+  animation: sheet-up 0.24s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@keyframes pop-in {
+  from {
+    transform: scale(0.94);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+.animate-pop {
+  animation: pop-in 0.2s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@keyframes pulse-ring {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.45;
+    transform: scale(1.35);
+  }
+}
+.animate-pulse-ring {
+  animation: pulse-ring 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Respect the standalone (installed) display mode: no text selection drag. */
+@media all and (display-mode: standalone) {
+  body {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  input,
+  textarea,
+  [contenteditable] {
+    user-select: text;
+    -webkit-user-select: text;
+  }
+}

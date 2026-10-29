@@ -1,0 +1,302 @@
+import type { ChapterPlanInput } from "./types";
+import { parseBatchSource } from "./batch-source";
+
+export const FR_SUBJECT = {
+  name: "Financial Reporting",
+  teacher: "CA Aakash Kandoi",
+  color: "emerald",
+  defaultHoursPerLecture: 1.25,
+  appTitle: "CA Final FR Regular Batch Tracker (CA Aakash Kandoi)",
+};
+
+/**
+ * Compact source format:
+ *   ## Chapter title [| total runtime]
+ *   L12P3 (optional suffix) 1:24     -> lecture 12, part 3, 1h24m
+ *   @@ Appear for Test 1 (...)       -> milestone attached to the chapter above
+ *   Free text line                   -> item with no known runtime
+ */
+const FR_SOURCE = `
+## Intro to Ind AS & Sch. III | 5:35
+L1P1 1:38
+L1P2 1:11
+L2P1 1:33
+L2P2 1:12
+## Ind AS 16 | 11:59
+L3P1 1:31
+L3P2 0:57
+L4P1 1:35
+L4P2 1:07
+L5P1 1:40
+L5P2 0:56
+L6P1 1:36
+L6P2 0:59
+L7P1 1:35
+## Ind AS 38 | 5:50
+L7P2 0:55
+L8P1 1:24
+L8P2 1:14
+L9P1 1:21
+L9P2 0:55
+## Ind AS 40 | 2:51
+L10P1 1:29
+L10P2 1:22
+@@ Appear for Test 1 (Intro to IND AS & IND AS 16, 38, 40)
+## Ind AS 36 | 9:59
+L11P1 1:21
+L11P2 1:27
+L12P1 1:45
+L12P2 0:55
+L13P1 1:32
+L13P2 1:08
+L14P1 1:47
+## Ind AS 105 | 4:57
+L14P2 0:43
+L15P1 1:30
+L15P2 0:52
+L16P1 1:50
+## Ind AS 41 | 4:32
+L16P2 0:35
+L17P1 1:28
+L17P2 1:17
+L18P1 1:11
+## Ind AS 2 | 4:09
+L18P2 1:26
+L19P1 2:42
+@@ Appear for Test 2 (IND AS 36, 105, 41, 2)
+## Ind AS 1 | 3:53
+L19P2 1:14
+L20P1 1:25
+L20P2 1:13
+## Ind AS 10 | 3:56
+L21P1 1:23
+L21P2 1:05
+L22P1 1:10
+L22P2 0:17
+## Ind AS 37 | 4:12
+L22P3 1:24
+L23P1 1:04
+L23P2 1:33
+L23P3 0:10
+## Ind AS 8 | 4:43
+L24P1 1:08
+L24P2 1:04
+L25P1 1:16
+L25P2 1:05
+L25P3 0:08
+## Ind AS 108 | 3:04
+L26P1 1:41
+L26P2 1:22
+@@ Appear for Test 3 (IND AS 1, 8, 10, 37, 108)
+## Financial Instruments | 40:57
+L27P1 1:25
+L27P2 1:21
+L28P1 1:40
+L28P2 0:53
+L29P1 1:43
+L29P2 0:53
+L30P1 1:37
+L30P2 0:53
+L31P1 1:13
+L31P2 1:13
+L32P1 1:08
+L32P2 1:31
+L33P1 1:28
+L33P2 1:09
+L34P1 1:19
+L34P2 1:10
+L35P1 1:22
+L35P2 1:01
+L36P1 1:45
+L36P2 1:03
+L37P1 1:36
+L37P2 1:17
+L38P1 1:20
+L38P2 1:06
+L39P1 1:23
+L39P2 0:58
+L40P1 1:34
+L40P2 1:07
+L41P1 1:23
+L41P2 1:12
+L41P3 1:56
+@@ Appear for Test 4 (Financial Instruments)
+## Ind AS 20 | 4:11
+L42P1 1:22
+L42P2 1:14
+L43P1 1:35
+## Ind AS 34 | 3:09
+L43P2 0:35
+L43P3 2:34
+## Ind AS 23 | 7:03
+L44P1 1:20
+L44P2 1:02
+L45P1 1:13
+L45P2 1:12
+L46P1 1:19
+L46P2 0:54
+## Ind AS 116 | 18:39
+L47P1 1:37
+L47P2 0:51
+L48P1 1:15
+L48P2 1:15
+L49P1 1:14
+L49P2 1:36
+L49P3 0:31
+L50P1 1:27
+L50P2 0:40
+L51P1 1:14
+L51P2 1:19
+L52P1 1:44
+L52P2 0:52
+L53P1 1:27
+L53P2 0:51
+L53P3 0:27
+L53P4 (Ind AS 116 vs AS 19) 0:12
+## Ind AS 19 | 10:00
+L54P1 1:19
+L54P2 1:15
+L55P1 1:17
+L55P2 1:15
+L56P1 1:24
+L56P2 0:44
+L57P1 1:25
+L57P2 1:16
+@@ Appear for Test 5 (IND AS 20, 23, 34, 116, 19)
+## Ind AS 12 | 13:57
+L58P1 1:36
+L58P2 1:14
+L59P1 1:16
+L59P2 1:22
+L60P1 1:23
+L60P2 1:19
+L61P1 1:31
+L61P2 1:02
+L62P1 1:30
+L62P2 1:24
+L62P3 0:14
+## Ind AS 102 | 12:57
+L63P1 1:40
+L63P2 1:00
+L64P1 1:18
+L64P2 1:07
+L64P3 0:06
+L65P1 1:23
+L65P2 0:44
+L66P1 1:50
+L66P2 0:51
+L67P1 1:50
+L67P2 1:04
+@@ Appear for Test 6 (IND AS 12 & 102)
+## Ind AS 113 | 2:55
+L68P1 1:08
+L68P2 1:46
+## Ind AS 103 | 21:27
+L69P1 1:27
+L69P2 1:08
+L70P1 1:05
+L70P2 1:29
+L71P1 1:22
+L71P2 0:47
+L72P1 1:16
+L72P2 1:19
+L73P1 1:24
+L73P2 0:48
+L74P1 1:42
+L74P2 0:37
+L75P1 1:22
+L75P2 0:49
+L76P1 1:21
+L76P2 0:48
+L77P1 1:32
+L77P2 0:58
+L77P3 0:05
+## Ind AS 27 & 110 | 24:21
+L78P1 (Ind AS 27 & 110) 1:06
+L78P2 (Ind AS 110) 1:05
+L79P1 (Ind AS 110) 1:29
+L79P2 (Ind AS 110) 0:51
+L80P1 (Ind AS 110) 1:01
+L80P2 (Ind AS 110) 1:02
+L81P1 (Ind AS 110) 1:47
+L81P2 (Ind AS 110) 0:51
+L82P1 (Ind AS 110) 1:41
+L82P2 (Ind AS 110) 1:24
+L83P1 (Ind AS 110) 1:20
+L83P2 (Ind AS 110) 0:28
+L84P1 (Ind AS 110) 1:17
+L84P2 (Ind AS 110) 0:50
+L84P3 (Ind AS 110) 1:36
+L85P1 (Ind AS 110) 2:02
+L85P2 (Ind AS 110) 1:25
+L86P1 (Ind AS 110) 1:48
+L86P2 (Ind AS 110) 1:08
+## Ind AS 111 | 4:10
+L87P1 0:42
+L87P2 2:24
+L88P1 1:03
+## Ind AS 28 | 5:36
+L88P2 1:28
+L89P1 1:24
+L89P2 1:06
+L90P1 1:37
+## Consolidation Extra Questions | 5:48
+L90P2 (Ind AS 28 & 110 - Big Qs.) 1:23
+L91P1 (CFS Extra Qs.) 1:18
+L91P2 (CFS Extra Qs.) 1:48
+L91P3 (Ind AS 111 & 28 Extra Qs.) 1:18
+@@ Appear for Test 7 (IND AS 103, 110, 111, 28)
+## Ind AS 33 | 10:06
+L92P1 0:51
+L92P2 1:20
+L92P3 1:14
+L93P1 1:16
+L93P2 1:22
+L94P1 2:01
+L94P2 1:59
+## Ind AS 21 | 7:09
+L95P1 1:40
+L95P2 1:03
+L96P1 2:17
+L96P2 2:06
+## Ind AS 115 | 19:45
+L97P1 1:36
+L97P2 0:53
+L98P1 1:29
+L98P2 1:09
+L99P1 1:50
+L99P2 1:10
+L100P1 1:25
+L100P2 1:01
+L101P1 1:26
+L101P2 1:05
+L102P1 1:35
+L102P2 0:57
+L103P1 1:18
+L103P2 0:59
+L103P3 1:31
+L103P4 (Ind AS 115 vs AS 7 & 9) 0:12
+## Ind AS 7 | 7:43
+L104P1 1:16
+L104P2 1:32
+L104P3 1:05
+L105P1 1:22
+L105P2 0:50
+L105P3 1:35
+## Ind AS 24 | 2:36
+L106P1 1:37
+L106P2 0:59
+## Additional / Pending Topics
+L106P3 (Revision Strategy, Guidance & Motivation)
+Pending Topics (IND AS 101, Analysis of FS, Common Pool, Ethics, Technology)
+`;
+
+export { durationToHours } from "./batch-source";
+
+export const FR_SEED: ChapterPlanInput[] = parseBatchSource(FR_SOURCE);
+
+/** Realistic starting progress so the app feels alive on first load. */
+export const FR_COMPLETED: Record<string, number> = {
+  "Intro to Ind AS & Sch. III": 2,
+  "Ind AS 16": 5,
+};
